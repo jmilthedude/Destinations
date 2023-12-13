@@ -5,7 +5,7 @@
 
   "name": "Destinations",
   "description": "A vanilla-friendly server-side mod to allow fast travelling to distant destinations.",
-  "authors": [],
+  "authors": ["jmilthedude"],
   "contact": {},
 
   "license": "MIT",
