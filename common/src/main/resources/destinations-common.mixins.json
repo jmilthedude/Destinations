@@ -1,9 +1,12 @@
 {
   "required": true,
   "minVersion": "0.8",
-  "package": "net.ninjadev.destinations.mixin.forge",
+  "package": "net.ninjadev.destinations.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
+    "ItemMixin",
+    "MinecraftServerMixin",
+    "ServerPlayerInteractionManagerMixin"
   ],
   "client": [
   ],

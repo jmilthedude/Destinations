@@ -12,7 +12,11 @@
   "icon": "icon.png",
 
   "environment": "*",
-  "entrypoints": {},
+  "entrypoints": {
+    "main": [
+      "net.ninjadev.destinations.fabric.DestinationsFabric"
+    ]
+  },
   "mixins": [
     "destinations.mixins.json",
     "destinations-common.mixins.json"
