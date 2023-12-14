@@ -44,11 +44,11 @@ public class DestinationStructure {
     }
 
     public static boolean isValidBase(Block block) {
-        return block == ModConfigs.GENERAL.getBaseBlock();
+        return ModConfigs.GENERAL.getBaseBlocks().contains(block);
     }
 
     public static boolean isValidTop(Block block) {
-        return block == ModConfigs.GENERAL.getTopBlock();
+        return ModConfigs.GENERAL.getTopBlocks().contains(block);
     }
 
     public static boolean isValidBlock(Block block) {

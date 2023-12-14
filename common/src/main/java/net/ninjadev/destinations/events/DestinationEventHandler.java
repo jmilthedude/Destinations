@@ -61,11 +61,13 @@ public class DestinationEventHandler {
         ServerWorld world = data.getWorld();
         BlockPos blockPos = hitResult.getBlockPos();
         if (!DestinationStructure.isValid(world, blockPos)) return;
-        Optional<Destination> destination = DestinationsState.get().getDestination(data.getWorld(), blockPos);
+        BlockPos origin = DestinationStructure.findTop(world, blockPos);
+        if (origin == null) return;
+        Optional<Destination> destination = DestinationsState.get().getDestination(data.getWorld(), origin);
         if (destination.isEmpty()) return;
         if (DestinationsState.get().addStored(data.getPlayer(), destination.get())) {
             String name = destination.get().getName();
-            world.playSound(null, blockPos, SoundEvents.ENTITY_PLAYER_LEVELUP, SoundCategory.PLAYERS, 0.75f, 1.25f);
+            world.playSound(null, origin, SoundEvents.ENTITY_PLAYER_LEVELUP, SoundCategory.PLAYERS, 0.75f, 1.25f);
             data.getPlayer().sendMessage(Text.literal(String.format("You have added %s%s%s to your list of destinations!", Formatting.DARK_AQUA, name, Formatting.RESET)), true);
             data.setResult(ActionResult.SUCCESS);
         }
@@ -81,10 +83,15 @@ public class DestinationEventHandler {
         BlockPos signPos = signBlock.getPos();
         BlockState state = world.getBlockState(signBlock.getPos());
         Direction direction = state.get(HorizontalFacingBlock.FACING);
-        BlockPos topBlock = signPos.offset(direction.getOpposite());
+        BlockPos adjacent = signPos.offset(direction.getOpposite());
 
-        if (DestinationStructure.isValid(world, topBlock)) {
-            boolean exists = DestinationsState.get().exists(world, topBlock);
+        if (DestinationStructure.isValid(world, adjacent)) {
+            if (!DestinationStructure.isValidTop(world.getBlockState(adjacent).getBlock())) {
+                player.sendMessage(Text.literal("The sign must be placed on any side of the top block of the structure.").formatted(Formatting.RED), true);
+                world.breakBlock(signPos, true, player);
+                return;
+            }
+            boolean exists = DestinationsState.get().exists(world, adjacent);
             if (exists) {
                 player.sendMessage(Text.literal("This destination already exists!").formatted(Formatting.RED), true);
                 world.breakBlock(signPos, true, player);
@@ -97,7 +104,7 @@ public class DestinationEventHandler {
                 newText.add(FilteredMessage.permitted(player.getDisplayName().getString()));
                 data.setMessages(newText);
                 String name = first.raw();
-                if (DestinationsState.get().add(player, new Destination(player.getUuid(), name, topBlock, world.getRegistryKey()))) {
+                if (DestinationsState.get().add(player, new Destination(player.getUuid(), name, adjacent, world.getRegistryKey()))) {
                     player.sendMessage(Text.literal(String.format("You have created a new Destination: %s%s%s", Formatting.DARK_AQUA, name, Formatting.RESET)), true);
                 }
             }
