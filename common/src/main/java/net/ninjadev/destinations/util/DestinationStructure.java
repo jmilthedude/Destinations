@@ -1,6 +1,6 @@
 package net.ninjadev.destinations.util;
 
-import net.minecraft.block.Block;
+import net.minecraft.block.*;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
@@ -11,7 +11,7 @@ public class DestinationStructure {
 
     public static boolean isValid(World world, BlockPos pos) {
         Block block = world.getBlockState(pos).getBlock();
-        if (!isValidBlock(block)) return false;
+        if (!(block instanceof AbstractSignBlock) && !isValidBlock(block)) return false;
 
         BlockPos top = findTop(world, pos);
         if (top == null) return false;
@@ -24,8 +24,15 @@ public class DestinationStructure {
     }
 
     public static BlockPos findTop(World world, BlockPos pos) {
-        Block current = world.getBlockState(pos).getBlock();
-        if (isValidTop(current)) return pos;
+        BlockPos top = pos.mutableCopy();
+        BlockState state = world.getBlockState(pos);
+        Block current = state.getBlock();
+        if (current instanceof AbstractSignBlock sign) {
+            Direction direction = state.get(HorizontalFacingBlock.FACING);
+            top = pos.offset(direction.getOpposite());
+            current = world.getBlockState(top).getBlock();
+        }
+        if (isValidTop(current)) return top;
         if (isValidBase(current)) {
             for (int i = 1; i <= 2; i++) {
                 BlockPos nextPos = pos.offset(Direction.UP, i);

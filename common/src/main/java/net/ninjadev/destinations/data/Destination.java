@@ -9,7 +9,6 @@ import net.minecraft.world.World;
 import net.ninjadev.destinations.util.INBTSerializable;
 
 import java.util.Objects;
-import java.util.Set;
 import java.util.UUID;
 
 public class Destination implements INBTSerializable<NbtCompound> {
@@ -27,6 +26,10 @@ public class Destination implements INBTSerializable<NbtCompound> {
         this.y = y;
         this.z = z;
         this.world = world;
+    }
+
+    public Destination(UUID owner, String name, BlockPos pos, RegistryKey<World> world) {
+        this(owner, name, pos.getX(), pos.getY(), pos.getZ(), world);
     }
 
     public Destination(NbtCompound nbt) {

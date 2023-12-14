@@ -1,6 +1,6 @@
 package net.ninjadev.destinations.mixin;
 
-import net.minecraft.item.Item;
+import net.minecraft.block.BlockState;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.network.ServerPlayerInteractionManager;
@@ -10,18 +10,15 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
-import net.ninjadev.destinations.data.Destination;
-import net.ninjadev.destinations.data.DestinationsState;
-import net.ninjadev.destinations.init.ModConfigs;
-import net.ninjadev.destinations.util.DestinationStructure;
+import net.ninjadev.destinations.events.event.BlockBreakEvent;
+import net.ninjadev.destinations.events.event.BlockInteractEvent;
+import net.ninjadev.destinations.init.ModEvents;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-
-import java.util.Optional;
 
 @Mixin(ServerPlayerInteractionManager.class)
 public class ServerPlayerInteractionManagerMixin {
@@ -33,29 +30,24 @@ public class ServerPlayerInteractionManagerMixin {
     protected ServerPlayerEntity player;
 
     @Inject(method = "tryBreakBlock", at = @At("HEAD"), cancellable = true)
-    public void preventBlockBreak(BlockPos pos, CallbackInfoReturnable<Boolean> cir) {
-        if (!DestinationStructure.isValid(this.world, pos)) return;
-        DestinationsState destinationsState = DestinationsState.get();
-        if (!destinationsState.exists(world, pos)) return;
-        Optional<Destination> destination = destinationsState.getDestination(player, world, pos);
-        if (destination.isEmpty()) {
+    public void onTryBreakBlock(BlockPos pos, CallbackInfoReturnable<Boolean> cir) {
+        BlockState state = this.world.getBlockState(pos);
+        BlockBreakEvent.Data data = ModEvents.BLOCK_BREAK.invoke(new BlockBreakEvent.Data(this.world, pos, state, this.player));
+        if (data.isCancelled()) {
             cir.setReturnValue(false);
             cir.cancel();
-        } else {
-            cir.setReturnValue(false);
-            cir.cancel();
-            DestinationStructure.destroyStructure(player, pos);
-            destinationsState.remove(player, destination.get());
         }
     }
 
-    @Inject(method = "interactBlock", at = @At("RETURN"))
-    public void createDestination(ServerPlayerEntity player, World world, ItemStack stack, Hand hand, BlockHitResult hitResult, CallbackInfoReturnable<ActionResult> cir) {
-        Item item = stack.getItem();
-        if (ModConfigs.GENERAL.getTopBlock().asItem() != item) return;
-        BlockPos blockPos = hitResult.getBlockPos().up();
-        if (!DestinationStructure.isValid(world, blockPos)) return;
-        DestinationsState.get().add(player, new Destination(player.getUuid(), "Test", blockPos.getX(), blockPos.getY(), blockPos.getZ(), world.getRegistryKey()));
+    @Inject(method = "interactBlock", at = @At("HEAD"), cancellable = true)
+    public void onBlockInteract(ServerPlayerEntity player, World world, ItemStack stack, Hand hand, BlockHitResult hitResult, CallbackInfoReturnable<ActionResult> cir) {
+        if (world instanceof ServerWorld serverWorld) {
+            BlockInteractEvent.Data data = ModEvents.BLOCK_INTERACT.invoke(new BlockInteractEvent.Data(player, serverWorld, stack, hand, hitResult, cir.getReturnValue()));
+            if (data.isCancelled()) {
+                cir.setReturnValue(data.getResult());
+                cir.cancel();
+            }
+        }
     }
 
 }

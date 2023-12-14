@@ -14,11 +14,7 @@ public abstract class Config {
     public void generateConfig() {
         this.reset();
 
-        try {
-            this.writeConfig();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        this.writeConfig();
     }
 
     private File getConfigFile() {
@@ -28,7 +24,7 @@ public abstract class Config {
     public abstract String getName();
 
     @SuppressWarnings("unchecked")
-    public <T extends Config> T  readConfig() {
+    public <T extends Config> T readConfig() {
         try {
             return (T) GSON.fromJson(new FileReader(this.getConfigFile()), this.getClass());
         } catch (FileNotFoundException e) {
@@ -40,19 +36,13 @@ public abstract class Config {
 
     protected abstract void reset();
 
-    public void writeConfig() throws IOException {
-        File dir = new File(this.root);
-        if (!dir.exists() && !dir.mkdirs()) return;
-        if (!this.getConfigFile().exists() && !this.getConfigFile().createNewFile()) return;
-        FileWriter writer = new FileWriter(this.getConfigFile());
-        GSON.toJson(this, writer);
-        writer.flush();
-        writer.close();
-    }
-
-    public void save() {
-        try {
-            this.writeConfig();
+    public void writeConfig() {
+        try (FileWriter writer = new FileWriter(this.getConfigFile())) {
+            File dir = new File(this.root);
+            if (!dir.exists() && !dir.mkdirs()) return;
+            if (!this.getConfigFile().exists() && !this.getConfigFile().createNewFile()) return;
+            GSON.toJson(this, writer);
+            writer.flush();
         } catch (IOException e) {
             e.printStackTrace();
         }

@@ -5,23 +5,28 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
+import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.PersistentState;
 import net.minecraft.world.World;
 import net.ninjadev.destinations.Destinations;
+import net.ninjadev.destinations.init.ModConfigs;
 import net.ninjadev.destinations.util.DestinationStructure;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class DestinationsState extends PersistentState {
+
     private static final String DATA_NAME = Destinations.MOD_ID + "_Data";
 
-    private final Map<UUID, Set<Destination>> entries = new HashMap<>();
+    private final Map<UUID, Set<Destination>> created = new HashMap<>();
+    private final Map<UUID, Set<Destination>> stored = new HashMap<>();
 
 
     public Set<Destination> getDestinations(PlayerEntity player) {
-        return ImmutableSet.copyOf(entries.getOrDefault(player.getUuid(), new HashSet<>()));
+        return ImmutableSet.copyOf(created.getOrDefault(player.getUuid(), new HashSet<>()));
     }
 
     public Optional<Destination> getDestination(PlayerEntity player, World world, BlockPos pos) {
@@ -37,11 +42,21 @@ public class DestinationsState extends PersistentState {
         return Optional.empty();
     }
 
+    public Optional<Destination> getDestination(World world, BlockPos pos) {
+        BlockPos top = DestinationStructure.findTop(world, pos);
+        if (top == null) return Optional.empty();
+        return this.created.values()
+                .stream()
+                .map(ArrayList::new)
+                .flatMap(List::stream)
+                .filter(destination -> destination.getWorld() == world.getRegistryKey() && destination.getY() == top.getY() && destination.getX() == top.getX() && destination.getZ() == top.getZ())
+                .findFirst();
+    }
+
     public boolean exists(World world, BlockPos pos) {
-        if (!DestinationStructure.isValid(world, pos)) return false;
         BlockPos top = DestinationStructure.findTop(world, pos);
         if (top == null) return false;
-        return this.entries.values()
+        return this.created.values()
                 .stream()
                 .map(ArrayList::new)
                 .flatMap(List::stream)
@@ -49,51 +64,104 @@ public class DestinationsState extends PersistentState {
     }
 
     public boolean add(PlayerEntity player, Destination destination) {
-        return this.add(player.getUuid(), destination);
-    }
-
-    public boolean add(UUID uuid, Destination destination) {
-        if (entries.containsKey(uuid)) {
-            if (entries.get(uuid).size() == 9) return false;
-            boolean added = entries.get(uuid).add(destination);
+        UUID uuid = player.getUuid();
+        if (created.containsKey(uuid)) {
+            int max = ModConfigs.GENERAL.getMaxCreated();
+            if (created.get(uuid).size() == max) {
+                player.sendMessage(Text.literal(String.format("You have reached your destination limit of %s destinations.", max)).formatted(Formatting.GOLD), true);
+                return false;
+            }
+            boolean added = created.get(uuid).add(destination);
             if (added) this.markDirty();
             return added;
         }
         Set<Destination> destinations = new HashSet<>();
         destinations.add(destination);
-        entries.put(uuid, destinations);
+        created.put(uuid, destinations);
         this.markDirty();
         return true;
     }
 
     public boolean remove(PlayerEntity player, Destination destination) {
         UUID uuid = player.getUuid();
-        if (!entries.containsKey(uuid)) {
+        if (!created.containsKey(uuid)) {
             return false;
         }
 
-        Set<Destination> destinations = entries.get(uuid);
+        Set<Destination> destinations = created.get(uuid);
         boolean removed = destinations.remove(destination);
         if (removed) this.markDirty();
         return removed;
     }
 
+    public boolean addStored(PlayerEntity player, Destination destination) {
+        UUID uuid = player.getUuid();
+        if (stored.containsKey(uuid)) {
+            if (stored.get(uuid).size() == 9) {
+                player.sendMessage(Text.literal("You have reached your stored destination limit of 9 destinations.").formatted(Formatting.GOLD), true);
+                return false;
+            }
+            boolean added = stored.get(uuid).add(destination);
+            if (added) this.markDirty();
+            return added;
+        }
+        Set<Destination> destinations = new HashSet<>();
+        destinations.add(destination);
+        stored.put(uuid, destinations);
+        this.markDirty();
+        return true;
+    }
+
+    public boolean removeStored(PlayerEntity player, Destination destination) {
+        UUID uuid = player.getUuid();
+        if (!stored.containsKey(uuid)) {
+            return false;
+        }
+
+        Set<Destination> destinations = stored.get(uuid);
+        boolean removed = destinations.remove(destination);
+        if (removed) this.markDirty();
+        return removed;
+    }
+
+    public Set<Destination> getStoredDestinations(PlayerEntity player) {
+        return ImmutableSet.copyOf(stored.getOrDefault(player.getUuid(), new HashSet<>()));
+    }
+
     @Override
     public NbtCompound writeNbt(NbtCompound nbt) {
-        NbtList list = new NbtList();
-        for (Map.Entry<UUID, Set<Destination>> entry : entries.entrySet()) {
-            entry.getValue().forEach(destination -> list.add(destination.serialize()));
-            nbt.put(entry.getKey().toString(), list);
+        NbtCompound createdTag = new NbtCompound();
+        NbtList createdList = new NbtList();
+        for (Map.Entry<UUID, Set<Destination>> entry : this.created.entrySet()) {
+            entry.getValue().forEach(destination -> createdList.add(destination.serialize()));
+            createdTag.put(entry.getKey().toString(), createdList);
         }
+
+        NbtCompound storedTag = new NbtCompound();
+        NbtList storedList = new NbtList();
+        for (Map.Entry<UUID, Set<Destination>> entry : stored.entrySet()) {
+            entry.getValue().forEach(destination -> storedList.add(destination.serialize()));
+            storedTag.put(entry.getKey().toString(), storedList);
+        }
+
+        nbt.put("created", createdTag);
+        nbt.put("stored", storedTag);
         return nbt;
     }
 
     private static DestinationsState load(NbtCompound nbt) {
         DestinationsState state = new DestinationsState();
-        for (String key : nbt.getKeys()) {
+        NbtCompound createdNbt = nbt.getCompound("created");
+        for (String key : createdNbt.getKeys()) {
             NbtList list = nbt.getList(key, NbtElement.COMPOUND_TYPE);
             Set<Destination> destinations = list.stream().map(tag -> (NbtCompound) tag).map(Destination::new).collect(Collectors.toSet());
-            state.entries.put(UUID.fromString(key), destinations);
+            state.created.put(UUID.fromString(key), destinations);
+        }
+        NbtCompound storedNbt = nbt.getCompound("stored");
+        for (String key : storedNbt.getKeys()) {
+            NbtList list = nbt.getList(key, NbtElement.COMPOUND_TYPE);
+            Set<Destination> destinations = list.stream().map(tag -> (NbtCompound) tag).map(Destination::new).collect(Collectors.toSet());
+            state.stored.put(UUID.fromString(key), destinations);
         }
         return state;
     }

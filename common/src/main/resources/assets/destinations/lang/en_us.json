@@ -1,3 +1,4 @@
 {
-  "screen.destinations.destination_screen.title": "Destinations"
+  "screen.destinations.destination_screen.title": "Destinations",
+  "chat.destinations.destination_removed": "The destination %s '%s' %s has been removed!"
 }

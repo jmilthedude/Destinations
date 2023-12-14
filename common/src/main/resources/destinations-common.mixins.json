@@ -6,7 +6,8 @@
   "mixins": [
     "ItemMixin",
     "MinecraftServerMixin",
-    "ServerPlayerInteractionManagerMixin"
+    "ServerPlayerInteractionManagerMixin",
+    "SignBlockEntityMixin"
   ],
   "client": [
   ],
