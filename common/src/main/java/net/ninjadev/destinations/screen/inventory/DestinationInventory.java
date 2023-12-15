@@ -9,6 +9,7 @@ import java.util.List;
 
 public class DestinationInventory extends SimpleInventory {
 
+
     public DestinationInventory() {
         super(45);
     }

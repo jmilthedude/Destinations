@@ -1,13 +1,22 @@
 package net.ninjadev.destinations.data;
 
+import net.minecraft.client.item.TooltipContext;
+import net.minecraft.client.item.TooltipData;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
+import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.ninjadev.destinations.util.INBTSerializable;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -37,7 +46,6 @@ public class Destination implements INBTSerializable<NbtCompound> {
     }
 
 
-
     public UUID getOwner() {
         return owner;
     }
@@ -60,6 +68,22 @@ public class Destination implements INBTSerializable<NbtCompound> {
 
     public RegistryKey<World> getWorld() {
         return world;
+    }
+
+    public int getDistance(PlayerEntity player) {
+        double distance = player.squaredDistanceTo(this.x, this.y, this.z);
+        return (int) Math.sqrt(distance);
+    }
+
+    public ItemStack getStack(int xpCost, int currentXp) {
+        boolean canTravel = xpCost <= currentXp;
+        Item item = canTravel ? Items.GREEN_STAINED_GLASS_PANE : Items.RED_STAINED_GLASS_PANE;
+        ItemStack stack = new ItemStack(item);
+        stack.setCustomName(Text.literal(this.getName()).formatted(Formatting.DARK_AQUA));
+        stack.getTooltip(null, TooltipContext.BASIC).add(Text.empty());
+        stack.getTooltip(null, TooltipContext.BASIC).add(Text.literal(String.format("%s, %s, %s in %s", this.x, this.y, this.z, this.world.getValue().getPath().toUpperCase())));
+        stack.getTooltip(null, TooltipContext.BASIC).add(Text.literal(String.format("Exp Cost: %s%s%s Levels", xpCost, canTravel ? Formatting.GREEN : Formatting.RED, Formatting.RESET)));
+        return stack;
     }
 
     @Override
