@@ -5,6 +5,7 @@ import net.minecraft.block.HorizontalFacingBlock;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.SignBlockEntity;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.filter.FilteredMessage;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
@@ -22,10 +23,7 @@ import net.minecraft.world.World;
 import net.ninjadev.destinations.Destinations;
 import net.ninjadev.destinations.data.Destination;
 import net.ninjadev.destinations.data.DestinationsState;
-import net.ninjadev.destinations.events.event.BlockBreakEvent;
-import net.ninjadev.destinations.events.event.BlockInteractEvent;
-import net.ninjadev.destinations.events.event.ItemUseEvent;
-import net.ninjadev.destinations.events.event.SignTextChangeEvent;
+import net.ninjadev.destinations.events.event.*;
 import net.ninjadev.destinations.init.ModConfigs;
 import net.ninjadev.destinations.init.ModEvents;
 import net.ninjadev.destinations.screen.DestinationScreenHandler;
@@ -54,6 +52,16 @@ public class DestinationEventHandler {
         ModEvents.BLOCK_INTERACT.register(this, DestinationEventHandler::handleBlockInteraction);
         ModEvents.ITEM_USE.register(this, DestinationEventHandler::handleItemUse);
         ModEvents.SIGN_TEXT_CHANGE.register(this, DestinationEventHandler::handleSignTextChange);
+        ModEvents.ITEM_STACK_TOOLTIP.register(this, DestinationEventHandler::handleTooltip);
+    }
+
+    private static void handleTooltip(ItemStackTooltipEvent.Data data) {
+        NbtCompound nbt = data.stack.getOrCreateNbt();
+        if (nbt.contains("destination")) {
+            Destination destination = new Destination(nbt.getCompound("destination"));
+            data.result.clear();
+            data.result.addAll(destination.createTooltip(data.player));
+        }
     }
 
     private static void handleBlockInteraction(BlockInteractEvent.Data data) {
@@ -98,13 +106,15 @@ public class DestinationEventHandler {
             } else {
                 List<FilteredMessage> newText = new ArrayList<>();
                 FilteredMessage first = data.getMessages().get(0);
+                FilteredMessage second = data.getMessages().get(1);
                 newText.add(first);
                 newText.add(FilteredMessage.EMPTY);
                 newText.add(FilteredMessage.permitted("Owner:"));
                 newText.add(FilteredMessage.permitted(player.getDisplayName().getString()));
                 data.setMessages(newText);
                 String name = first.raw();
-                if (DestinationsState.get().add(player, new Destination(player.getUuid(), name, adjacent, world.getRegistryKey()))) {
+                Destination destination = new Destination(player.getUuid(), name, adjacent, world.getRegistryKey(), second.raw().isEmpty() ? null : second.raw());
+                if (DestinationsState.get().add(player, destination)) {
                     player.sendMessage(Text.literal(String.format("You have created a new Destination: %s%s%s", Formatting.DARK_AQUA, name, Formatting.RESET)), true);
                 }
             }

@@ -14,7 +14,7 @@ import java.util.List;
 public class DestinationsConfig extends Config {
 
     @Expose private Option<Integer> maxCreated;
-    @Expose private Option<Integer> xpCostMultiplier;
+    @Expose private Option<Double> xpCostMultiplier;
     @Expose private Option<List<String>> baseBlocks;
     @Expose private Option<List<String>> topBlocks;
     @Expose private Option<String> item;
@@ -27,7 +27,7 @@ public class DestinationsConfig extends Config {
     @Override
     protected void reset() {
         maxCreated = new Option.IntValue(18, "The maximum number of destinations a player can create.");
-        xpCostMultiplier = new Option.IntValue(0, "The multiplier for the cost of XP during travel. Calculation is cost = distanceInBlocks * multiplier. Set to 0 for no cost.");
+        xpCostMultiplier = new Option.DoubleValue(0.0, "The multiplier for the cost of XP during travel. Calculation is cost = distanceInBlocks * multiplier. Set to 0 for no cost.");
         baseBlocks = new Option.ListValue<>(List.of(Registries.BLOCK.getId(Blocks.POLISHED_ANDESITE).toString()), "The ids of base blocks that can be used for the Destination Multi-Block Structure");
         topBlocks = new Option.ListValue<>(List.of(Registries.BLOCK.getId(Blocks.LAPIS_BLOCK).toString()), "The ids of top blocks that can be used for the Destination Multi-Block Structure");
         item = new Option.StringValue(Registries.ITEM.getId(Items.LAPIS_LAZULI).toString(), "The id of the item used to activate the Destination Structure or access the UI.");
@@ -37,8 +37,12 @@ public class DestinationsConfig extends Config {
         return maxCreated.getValue();
     }
 
-    public int getXpCostMultiplier() {
+    public double getXpCostMultiplier() {
         return xpCostMultiplier.getValue();
+    }
+
+    public int getCost(int distance) {
+        return (int) Math.floor((double)distance * this.xpCostMultiplier.getValue());
     }
 
     public List<Block> getBaseBlocks() {

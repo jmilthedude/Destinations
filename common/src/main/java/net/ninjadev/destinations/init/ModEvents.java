@@ -15,6 +15,7 @@ public class ModEvents {
     public static final SignTextChangeEvent SIGN_TEXT_CHANGE = register(new SignTextChangeEvent());
     public static final ServerTickEvent.Pre SERVER_TICK_PRE = register(new ServerTickEvent.Pre());
     public static final ServerTickEvent.Post SERVER_TICK_POST = register(new ServerTickEvent.Post());
+    public static final ItemStackTooltipEvent ITEM_STACK_TOOLTIP = register(new ItemStackTooltipEvent());
 
     private static <T extends Event<?,?>> T register(T event) {
         REGISTRY.add(event);

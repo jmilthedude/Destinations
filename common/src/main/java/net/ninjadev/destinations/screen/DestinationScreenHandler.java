@@ -2,7 +2,6 @@ package net.ninjadev.destinations.screen;
 
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.screen.NamedScreenHandlerFactory;
@@ -20,9 +19,11 @@ import net.ninjadev.destinations.screen.slot.NonInteractiveSlot;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Set;
+import java.util.function.Supplier;
 
 public class DestinationScreenHandler extends ScreenHandler {
     private final DestinationInventory inventory;
+    private static final Supplier<ItemStack> blank = () -> new ItemStack(Items.GRAY_STAINED_GLASS_PANE).setCustomName(Text.literal(""));
 
     public DestinationScreenHandler(int syncId, PlayerInventory playerInventory) {
         super(ScreenHandlerType.GENERIC_9X5, syncId);
@@ -51,15 +52,15 @@ public class DestinationScreenHandler extends ScreenHandler {
 
     private void load(PlayerEntity player) {
         Set<Destination> storedDestinations = DestinationsState.get().getStoredDestinations(player);
-        int index = 0 + 0;
+        int index = 0;
         for (Destination destination : storedDestinations) {
             int distance = destination.getDistance(player);
-            int xpCost = ModConfigs.GENERAL.getXpCostMultiplier() * distance;
-            ItemStack stack = destination.getStack(xpCost, player.experienceLevel);
+            int xpCost = ModConfigs.GENERAL.getCost(distance);
+            ItemStack stack = destination.createStack(xpCost, player.experienceLevel);
             this.inventory.setPseudoItem(index++, stack);
         }
-        for (int i = 9 + 0; i < 18; i++) {
-            this.inventory.setPseudoItem(i, new ItemStack(Items.GRAY_STAINED_GLASS_PANE).setCustomName(Text.literal("")));
+        for (int i = 9; i < 18; i++) {
+            this.inventory.setPseudoItem(i, blank.get());
         }
 
     }
@@ -74,7 +75,7 @@ public class DestinationScreenHandler extends ScreenHandler {
 
             @Override
             public Text getDisplayName() {
-                return Text.translatable("screen.destinations.destination_screen.title");
+                return Text.literal("Destinations");
             }
         };
         player.openHandledScreen(screenFactory);
