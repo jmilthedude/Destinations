@@ -41,6 +41,7 @@ public class Destination implements INBTSerializable<NbtCompound> {
         this.y = y;
         this.z = z;
         this.world = world;
+        if (iconId == null) return;
         Identifier iconIdentifier = new Identifier(iconId);
         if (Registries.ITEM.getIds().contains(iconIdentifier)) this.icon = Registries.ITEM.get(iconIdentifier);
     }
@@ -91,6 +92,10 @@ public class Destination implements INBTSerializable<NbtCompound> {
 
     public Optional<Item> getIcon() {
         return Optional.ofNullable(icon);
+    }
+
+    public BlockPos getBlockPos() {
+        return new BlockPos(this.x, this.y, this.z);
     }
 
     public int getDistance(PlayerEntity player) {

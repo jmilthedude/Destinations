@@ -1,15 +1,24 @@
 package net.ninjadev.destinations.screen;
 
+import net.minecraft.block.BedBlock;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.screen.NamedScreenHandlerFactory;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.ScreenHandlerType;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.screen.slot.SlotActionType;
+import net.minecraft.server.world.ServerWorld;
+import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.Vec3d;
+import net.ninjadev.destinations.Destinations;
 import net.ninjadev.destinations.data.Destination;
 import net.ninjadev.destinations.data.DestinationsState;
 import net.ninjadev.destinations.init.ModConfigs;
@@ -18,6 +27,7 @@ import net.ninjadev.destinations.screen.slot.DestinationSlot;
 import net.ninjadev.destinations.screen.slot.NonInteractiveSlot;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Supplier;
 
@@ -59,10 +69,14 @@ public class DestinationScreenHandler extends ScreenHandler {
             ItemStack stack = destination.createStack(xpCost, player.experienceLevel);
             this.inventory.setPseudoItem(index++, stack);
         }
-        for (int i = 9; i < 18; i++) {
+        for (int i = index; i < 9; i++) {
             this.inventory.setPseudoItem(i, blank.get());
         }
-
+        for (int i = 9; i < 45; i++) {
+            if (i != 22 && i != 39 && i != 41) this.inventory.setPseudoItem(i, blank.get());
+        }
+        this.inventory.setPseudoItem(39, new ItemStack(Items.ENDER_PEARL));
+        this.inventory.setPseudoItem(41, new ItemStack(Items.BARRIER));
     }
 
     public static void open(PlayerEntity player) {
@@ -83,10 +97,43 @@ public class DestinationScreenHandler extends ScreenHandler {
 
     @Override
     public void onSlotClick(int slotIndex, int button, SlotActionType actionType, PlayerEntity player) {
+        if (slotIndex == -999) return;
         Slot slot = this.getSlot(slotIndex);
-        System.out.println("SlotIndex: " + slot.getIndex());
-        System.out.println("Slot: " + slotIndex);
-        System.out.println("SlotActionType: " + actionType);
+        if (slot instanceof DestinationSlot destinationSlot) {
+            ItemStack stack = destinationSlot.getStack();
+
+            if (slotIndex == 22) return;
+            if (slotIndex < 9) {
+                NbtCompound nbt = stack.getOrCreateNbt();
+                if (!nbt.contains("destination")) return;
+                this.inventory.setPseudoItem(22, stack);
+                this.updateToClient();
+                return;
+            }
+
+            ItemStack destinationStack = this.inventory.getPseudoStack(22);
+            NbtCompound nbt = destinationStack.getOrCreateNbt();
+            if (!nbt.contains("destination")) return;
+            Destination destination = new Destination(nbt.getCompound("destination"));
+            ServerWorld world = Destinations.server.getWorld(destination.getWorld());
+            if (world == null) return;
+
+            if (slotIndex == 39) {
+                int cost = ModConfigs.GENERAL.getCost(destination.getDistance(player));
+                if (cost > player.experienceLevel) return;
+                BlockPos pos = destination.getBlockPos().offset(player.getHorizontalFacing().getOpposite());
+                Vec3d vec3d = BedBlock.findWakeUpPosition(player.getType(), world, pos.offset(Direction.DOWN, 2), player.getHorizontalFacing(), player.getYaw()).orElseGet(() -> {
+                    BlockPos nextPos = pos.up();
+                    return new Vec3d((double) nextPos.getX() + 0.5, (double) nextPos.getY() + 0.1, (double) nextPos.getZ() + 0.5);
+                });
+                player.teleport(world, vec3d.x + .5, vec3d.y, vec3d.z + .5, new HashSet<>(), player.getYaw(), player.getPitch());
+                player.addExperienceLevels(-cost);
+                player.playSound(SoundEvents.BLOCK_PORTAL_TRAVEL, SoundCategory.BLOCKS, 0.75f, 1.0f);
+            } else if (slotIndex == 41) {
+                DestinationsState.get().removeStored(player, destination);
+                DestinationScreenHandler.open(player);
+            }
+        }
     }
 
     @Override

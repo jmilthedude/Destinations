@@ -140,6 +140,14 @@ public class DestinationsState extends PersistentState {
         return true;
     }
 
+    public boolean removeStored(Destination destination) {
+        boolean removed = this.stored.values().removeIf(map -> map.get(destination.getId()) != null);
+
+        if (removed) this.markDirty();
+
+        return removed;
+    }
+
     public Set<Destination> getStoredDestinations(PlayerEntity player) {
         return ImmutableSet.copyOf(stored.getOrDefault(player.getUuid(), new HashMap<>()).values());
     }

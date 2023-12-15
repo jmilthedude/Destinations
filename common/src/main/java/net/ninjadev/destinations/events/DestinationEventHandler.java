@@ -90,6 +90,7 @@ public class DestinationEventHandler {
 
         BlockPos signPos = signBlock.getPos();
         BlockState state = world.getBlockState(signBlock.getPos());
+        if (!state.contains(HorizontalFacingBlock.FACING)) return;
         Direction direction = state.get(HorizontalFacingBlock.FACING);
         BlockPos adjacent = signPos.offset(direction.getOpposite());
 
@@ -155,6 +156,7 @@ public class DestinationEventHandler {
             data.setCancelled();
             DestinationStructure.destroyStructure(player, pos);
             if (destinationsState.remove(player, destination.get())) {
+                destinationsState.removeStored(destination.get());
                 player.sendMessage(Text.literal(String.format("The destination '%s%s%s' has been removed!", Formatting.DARK_AQUA, destination.get().getName(), Formatting.RESET)), true);
             }
         }
