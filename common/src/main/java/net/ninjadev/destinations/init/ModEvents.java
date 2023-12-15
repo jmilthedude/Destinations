@@ -1,6 +1,7 @@
 package net.ninjadev.destinations.init;
 
-import net.ninjadev.destinations.events.event.*;
+import net.ninjadev.destinations.events.Event;
+import net.ninjadev.destinations.events.impl.*;
 
 import java.util.ArrayList;
 import java.util.List;

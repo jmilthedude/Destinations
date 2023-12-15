@@ -4,7 +4,7 @@ import net.minecraft.client.item.TooltipContext;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.text.Text;
-import net.ninjadev.destinations.events.event.ItemStackTooltipEvent;
+import net.ninjadev.destinations.events.impl.ItemStackTooltipEvent;
 import net.ninjadev.destinations.init.ModEvents;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;

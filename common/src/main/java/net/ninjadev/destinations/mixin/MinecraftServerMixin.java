@@ -2,7 +2,7 @@ package net.ninjadev.destinations.mixin;
 
 import net.minecraft.server.MinecraftServer;
 import net.ninjadev.destinations.Destinations;
-import net.ninjadev.destinations.events.event.ServerTickEvent;
+import net.ninjadev.destinations.events.impl.ServerTickEvent;
 import net.ninjadev.destinations.init.ModEvents;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;

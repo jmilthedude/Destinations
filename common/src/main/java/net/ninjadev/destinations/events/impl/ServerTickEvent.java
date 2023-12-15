@@ -1,6 +1,7 @@
-package net.ninjadev.destinations.events.event;
+package net.ninjadev.destinations.events.impl;
 
 import net.minecraft.server.MinecraftServer;
+import net.ninjadev.destinations.events.Event;
 
 public abstract class ServerTickEvent extends Event<ServerTickEvent, ServerTickEvent.Data> {
 

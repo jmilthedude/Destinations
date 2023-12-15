@@ -1,7 +1,7 @@
 package net.ninjadev.destinations.util;
 
 import net.minecraft.util.Pair;
-import net.ninjadev.destinations.events.event.ServerTickEvent;
+import net.ninjadev.destinations.events.impl.ServerTickEvent;
 import net.ninjadev.destinations.init.ModEvents;
 
 import java.util.Iterator;

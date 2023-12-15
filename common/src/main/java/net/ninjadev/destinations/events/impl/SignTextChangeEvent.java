@@ -1,9 +1,10 @@
-package net.ninjadev.destinations.events.event;
+package net.ninjadev.destinations.events.impl;
 
 import net.minecraft.block.entity.SignBlockEntity;
 import net.minecraft.server.filter.FilteredMessage;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
+import net.ninjadev.destinations.events.Event;
 
 import java.util.List;
 

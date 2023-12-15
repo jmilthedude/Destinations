@@ -1,9 +1,10 @@
-package net.ninjadev.destinations.events.event;
+package net.ninjadev.destinations.events.impl;
 
 import net.minecraft.block.BlockState;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
+import net.ninjadev.destinations.events.Event;
 
 public class BlockBreakEvent extends Event<BlockBreakEvent, BlockBreakEvent.Data> {
 

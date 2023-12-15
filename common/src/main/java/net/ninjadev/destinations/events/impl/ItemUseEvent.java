@@ -1,10 +1,11 @@
-package net.ninjadev.destinations.events.event;
+package net.ninjadev.destinations.events.impl;
 
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Hand;
 import net.minecraft.util.TypedActionResult;
+import net.ninjadev.destinations.events.Event;
 
 public class ItemUseEvent extends Event<ItemUseEvent, ItemUseEvent.Data> {
 

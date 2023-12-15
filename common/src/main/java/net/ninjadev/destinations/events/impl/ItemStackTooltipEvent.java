@@ -1,13 +1,10 @@
-package net.ninjadev.destinations.events.event;
+package net.ninjadev.destinations.events.impl;
 
 import net.minecraft.client.item.TooltipContext;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
-import net.minecraft.util.Hand;
-import net.minecraft.util.TypedActionResult;
+import net.ninjadev.destinations.events.Event;
 
 import java.util.List;
 

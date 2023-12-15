@@ -1,7 +1,8 @@
-package net.ninjadev.destinations.events.event;
+package net.ninjadev.destinations.events.impl;
 
 import net.minecraft.item.ItemUsageContext;
 import net.minecraft.util.ActionResult;
+import net.ninjadev.destinations.events.Event;
 
 public class ItemUseOnBlockEvent extends Event<ItemUseOnBlockEvent, ItemUseOnBlockEvent.Data> {
 

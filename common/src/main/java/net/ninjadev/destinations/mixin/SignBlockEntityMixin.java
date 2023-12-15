@@ -8,7 +8,7 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
-import net.ninjadev.destinations.events.event.SignTextChangeEvent;
+import net.ninjadev.destinations.events.impl.SignTextChangeEvent;
 import net.ninjadev.destinations.init.ModEvents;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;

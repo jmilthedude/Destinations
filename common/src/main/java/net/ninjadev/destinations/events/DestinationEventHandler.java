@@ -23,7 +23,7 @@ import net.minecraft.world.World;
 import net.ninjadev.destinations.Destinations;
 import net.ninjadev.destinations.data.Destination;
 import net.ninjadev.destinations.data.DestinationsState;
-import net.ninjadev.destinations.events.event.*;
+import net.ninjadev.destinations.events.impl.*;
 import net.ninjadev.destinations.init.ModConfigs;
 import net.ninjadev.destinations.init.ModEvents;
 import net.ninjadev.destinations.screen.DestinationScreenHandler;

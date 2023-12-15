@@ -1,4 +1,4 @@
-package net.ninjadev.destinations.events.event;
+package net.ninjadev.destinations.events;
 
 import java.util.*;
 import java.util.function.Consumer;
