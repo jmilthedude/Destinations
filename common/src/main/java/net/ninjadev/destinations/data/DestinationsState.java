@@ -78,6 +78,7 @@ public class DestinationsState extends PersistentState {
                 player.sendMessage(Text.literal(String.format("You have reached your destination limit of %s destinations.", max)).formatted(Formatting.GOLD), true);
                 return false;
             }
+            if (map.containsKey(destination.getId())) return false;
 
             map.put(destination.getId(), destination);
             this.markDirty();
@@ -113,6 +114,7 @@ public class DestinationsState extends PersistentState {
                 player.sendMessage(Text.literal("You have reached your destination limit of 9 destinations.").formatted(Formatting.GOLD), true);
                 return false;
             }
+            if (map.containsKey(destination.getId())) return false;
 
             map.put(destination.getId(), destination);
             this.markDirty();
