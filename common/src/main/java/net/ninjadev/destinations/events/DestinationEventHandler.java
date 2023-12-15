@@ -107,13 +107,17 @@ public class DestinationEventHandler {
                 List<FilteredMessage> newText = new ArrayList<>();
                 FilteredMessage first = data.getMessages().get(0);
                 FilteredMessage second = data.getMessages().get(1);
+
                 newText.add(first);
                 newText.add(FilteredMessage.EMPTY);
                 newText.add(FilteredMessage.permitted("Owner:"));
                 newText.add(FilteredMessage.permitted(player.getDisplayName().getString()));
+
                 data.setMessages(newText);
+
                 String name = first.raw();
-                Destination destination = new Destination(player.getUuid(), name, adjacent, world.getRegistryKey(), second.raw().isEmpty() ? null : second.raw());
+                String iconId = second.raw();
+                Destination destination = new Destination(player.getUuid(), name, adjacent, world.getRegistryKey(), iconId.isEmpty() ? null : iconId);
                 if (DestinationsState.get().add(player, destination)) {
                     player.sendMessage(Text.literal(String.format("You have created a new Destination: %s%s%s", Formatting.DARK_AQUA, name, Formatting.RESET)), true);
                 }
