@@ -11,7 +11,7 @@
   "license": "MIT",
   "icon": "icon.png",
 
-  "environment": "*",
+  "environment": "server",
   "entrypoints": {
     "main": [
       "net.ninjadev.destinations.fabric.DestinationsFabric"
@@ -22,7 +22,6 @@
     "destinations-common.mixins.json"
   ],
   "depends": {
-    "fabric": "*",
     "fabricloader": ">=0.15.1",
     "minecraft": ">=1.20.1"
   }

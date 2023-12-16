@@ -104,7 +104,17 @@ public abstract class DestinationsState extends PersistentState {
     }
 
     public void removeFromAllPlayers(Destination destination) {
-        this.destinations.values().removeIf(destinationMap -> destinationMap.exists(destination));
+        for (DestinationMap map : this.destinations.values()) {
+            List<Destination> toRemove = new ArrayList<>();
+            for (Destination other : map.values()) {
+                if (other.getId().equals(destination.getId())) {
+                    toRemove.add(other);
+                }
+            }
+            for (Destination remove : toRemove) {
+                map.remove(remove);
+            }
+        }
         this.markDirty();
     }
 }
