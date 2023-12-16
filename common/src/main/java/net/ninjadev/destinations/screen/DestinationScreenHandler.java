@@ -1,6 +1,5 @@
 package net.ninjadev.destinations.screen;
 
-import net.minecraft.block.BedBlock;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
@@ -11,23 +10,17 @@ import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.ScreenHandlerType;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.screen.slot.SlotActionType;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
-import net.ninjadev.destinations.Destinations;
+import net.minecraft.util.Formatting;
 import net.ninjadev.destinations.data.Destination;
-import net.ninjadev.destinations.data.DestinationsState;
-import net.ninjadev.destinations.init.ModConfigs;
+import net.ninjadev.destinations.data.PlayerDestinationsState;
 import net.ninjadev.destinations.screen.inventory.DestinationInventory;
 import net.ninjadev.destinations.screen.slot.DestinationSlot;
 import net.ninjadev.destinations.screen.slot.NonInteractiveSlot;
+import net.ninjadev.destinations.util.DestinationUtil;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Supplier;
 
@@ -61,12 +54,10 @@ public class DestinationScreenHandler extends ScreenHandler {
     }
 
     private void load(PlayerEntity player) {
-        Set<Destination> storedDestinations = DestinationsState.get().getStoredDestinations(player);
+        Set<Destination> destinations = PlayerDestinationsState.get().getDestinationsForPlayerSorted(player);
         int index = 0;
-        for (Destination destination : storedDestinations) {
-            int distance = destination.getDistance(player);
-            int xpCost = ModConfigs.GENERAL.getCost(distance);
-            ItemStack stack = destination.createStack(xpCost, player.experienceLevel);
+        for (Destination destination : destinations) {
+            ItemStack stack = destination.createStack(player);
             this.inventory.setPseudoItem(index++, stack);
         }
         for (int i = index; i < 9; i++) {
@@ -75,8 +66,8 @@ public class DestinationScreenHandler extends ScreenHandler {
         for (int i = 9; i < 45; i++) {
             if (i != 22 && i != 39 && i != 41) this.inventory.setPseudoItem(i, blank.get());
         }
-        this.inventory.setPseudoItem(39, new ItemStack(Items.ENDER_PEARL));
-        this.inventory.setPseudoItem(41, new ItemStack(Items.BARRIER));
+        this.inventory.setPseudoItem(39, new ItemStack(Items.ENDER_PEARL).setCustomName(Text.literal(String.format("%sTeleport to: %s%s", Formatting.WHITE, Formatting.RED, "None Selected"))));
+        this.inventory.setPseudoItem(41, new ItemStack(Items.BARRIER).setCustomName(Text.literal(String.format("%sDelete: %s%s", Formatting.WHITE, Formatting.RED, "None Selected"))));
     }
 
     public static void open(PlayerEntity player) {
@@ -106,7 +97,15 @@ public class DestinationScreenHandler extends ScreenHandler {
             if (slotIndex < 9) {
                 NbtCompound nbt = stack.getOrCreateNbt();
                 if (!nbt.contains("destination")) return;
+                Destination destination = new Destination(nbt.getCompound("destination"));
+                boolean canTravel = destination.canTravel(player);
                 this.inventory.setPseudoItem(22, stack);
+
+                String teleportString = canTravel ? String.format("%sTeleport to: %s", Formatting.GREEN, stack.getName().getString()) : String.format("%sTOO FAR", Formatting.RED);
+                this.inventory.setPseudoItem(39, new ItemStack(Items.ENDER_PEARL).setCustomName(Text.literal(teleportString)));
+
+                this.inventory.setPseudoItem(41, new ItemStack(Items.BARRIER).setCustomName(Text.literal(String.format("%sDelete: %s", Formatting.RED, stack.getName().getString()))));
+
                 this.updateToClient();
                 return;
             }
@@ -115,22 +114,10 @@ public class DestinationScreenHandler extends ScreenHandler {
             NbtCompound nbt = destinationStack.getOrCreateNbt();
             if (!nbt.contains("destination")) return;
             Destination destination = new Destination(nbt.getCompound("destination"));
-            ServerWorld world = Destinations.server.getWorld(destination.getWorld());
-            if (world == null) return;
-
             if (slotIndex == 39) {
-                int cost = ModConfigs.GENERAL.getCost(destination.getDistance(player));
-                if (cost > player.experienceLevel) return;
-                BlockPos pos = destination.getBlockPos().offset(player.getHorizontalFacing().getOpposite());
-                Vec3d vec3d = BedBlock.findWakeUpPosition(player.getType(), world, pos.offset(Direction.DOWN, 2), player.getHorizontalFacing(), player.getYaw()).orElseGet(() -> {
-                    BlockPos nextPos = pos.up();
-                    return new Vec3d((double) nextPos.getX() + 0.5, (double) nextPos.getY() + 0.1, (double) nextPos.getZ() + 0.5);
-                });
-                player.teleport(world, vec3d.x + .5, vec3d.y, vec3d.z + .5, new HashSet<>(), player.getYaw(), player.getPitch());
-                player.addExperienceLevels(-cost);
-                player.playSound(SoundEvents.BLOCK_PORTAL_TRAVEL, SoundCategory.BLOCKS, 0.75f, 1.0f);
+                DestinationUtil.attemptTeleportPlayer(player, destination);
             } else if (slotIndex == 41) {
-                DestinationsState.get().removeStored(player, destination);
+                PlayerDestinationsState.get().remove(player, destination);
                 DestinationScreenHandler.open(player);
             }
         }

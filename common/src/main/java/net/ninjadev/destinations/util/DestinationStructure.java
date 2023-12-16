@@ -17,11 +17,11 @@ public class DestinationStructure {
     public static boolean isValid(World world, BlockPos pos) {
         Block block = world.getBlockState(pos).getBlock();
         if (!(block instanceof AbstractSignBlock) && !isValidBlock(block)) return false;
-
-        BlockPos top = findOrigin(world, pos);
-        if (top == null) return false;
+        Optional<BlockPos> originOptional = findOrigin(world, pos);
+        if (originOptional.isEmpty()) return false;
+        BlockPos origin = originOptional.get();
         for (int i = 1; i <= 2; i++) {
-            BlockPos nextPos = top.offset(Direction.DOWN, i);
+            BlockPos nextPos = origin.offset(Direction.DOWN, i);
             Block next = world.getBlockState(nextPos).getBlock();
             if (!isValidBase(next)) return false;
         }
@@ -32,7 +32,8 @@ public class DestinationStructure {
         BlockPos top = pos.mutableCopy();
         BlockState state = world.getBlockState(pos);
         Block current = state.getBlock();
-        if (current instanceof AbstractSignBlock sign) {
+        if (current instanceof AbstractSignBlock) {
+            if (!state.contains(HorizontalFacingBlock.FACING)) return Optional.empty();
             Direction direction = state.get(HorizontalFacingBlock.FACING);
             top = pos.offset(direction.getOpposite());
             current = world.getBlockState(top).getBlock();

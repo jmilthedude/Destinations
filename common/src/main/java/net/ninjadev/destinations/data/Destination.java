@@ -5,16 +5,20 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtList;
+import net.minecraft.nbt.NbtString;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
-import net.ninjadev.destinations.init.ModConfigs;
+import net.ninjadev.destinations.util.DestinationUtil;
 import net.ninjadev.destinations.util.INBTSerializable;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -41,8 +45,8 @@ public class Destination implements INBTSerializable<NbtCompound> {
         this.y = y;
         this.z = z;
         this.world = world;
-        if (iconId == null) return;
-        Identifier iconIdentifier = new Identifier(iconId);
+        Identifier iconIdentifier = Identifier.tryParse(iconId == null ? "" : iconId);
+        if (iconIdentifier == null) return;
         if (Registries.ITEM.getIds().contains(iconIdentifier)) this.icon = Registries.ITEM.get(iconIdentifier);
     }
 
@@ -68,6 +72,10 @@ public class Destination implements INBTSerializable<NbtCompound> {
 
     public UUID getOwner() {
         return owner;
+    }
+
+    public boolean isOwner(ServerPlayerEntity player) {
+        return player.getUuid().equals(this.owner);
     }
 
     public String getName() {
@@ -103,25 +111,60 @@ public class Destination implements INBTSerializable<NbtCompound> {
         return (int) Math.sqrt(distance);
     }
 
-    public ItemStack createStack(int xpCost, int currentXp) {
-        boolean canTravel = xpCost <= currentXp;
-        Item item = this.getIcon().isPresent() ? this.getIcon().get() : canTravel ? Items.GREEN_STAINED_GLASS_PANE : Items.RED_STAINED_GLASS_PANE;
+    public boolean canTravel(PlayerEntity player) {
+        int cost = DestinationUtil.getCost(player, this);
+        return cost <= player.experienceLevel;
+    }
+
+    public ItemStack createStack(PlayerEntity player) {
+        int distance = this.getDistance(player);
+        int cost = DestinationUtil.getCost(player, this);
+        Item item = this.getIcon().isPresent() ? this.getIcon().get() : this.canTravel(player) ? Items.LIME_BANNER : Items.RED_BANNER;
         ItemStack stack = new ItemStack(item);
         NbtCompound nbt = stack.getOrCreateNbt();
+        NbtCompound displayNbt = new NbtCompound();
         nbt.put("destination", this.serialize());
+        NbtList loreNbt = new NbtList();
+        List<Text> tooltip = this.createTooltip(this.canTravel(player), distance, cost);
+        tooltip.stream().map(Text.Serializer::toJson).map(NbtString::of).forEach(loreNbt::add);
+        displayNbt.put(ItemStack.LORE_KEY, loreNbt);
+        nbt.put(ItemStack.DISPLAY_KEY, displayNbt);
+        stack.setCustomName(Text.literal(String.format("%s%s%s", Formatting.RESET, Formatting.DARK_AQUA, this.name)));
         return stack;
     }
 
-    public List<Text> createTooltip(PlayerEntity player) {
-        int distance = this.getDistance(player);
-        int cost = ModConfigs.GENERAL.getCost(distance);
-        boolean canTravel = cost <= player.experienceLevel;
+    public List<Text> createTooltip(boolean canTravel, int distance, int cost) {
+        String dimension = this.getWorld().getValue().getPath();
         List<Text> tooltip = new ArrayList<>();
-        tooltip.add(Text.literal(this.name).formatted(Formatting.DARK_AQUA));
         tooltip.add(Text.empty());
-        tooltip.add(Text.literal(String.format("%s, %s, %s in %s", this.x, this.y, this.z, this.world.getValue().getPath().toUpperCase())));
-        tooltip.add(Text.literal(String.format("Exp Cost: %s%s%s Levels", (canTravel ? Formatting.GREEN : Formatting.RED), cost, Formatting.RESET)));
+        tooltip.add(Text.literal(
+                String.format("%s%s%s%s, %s%s%s, %s%s%s in %s%s",
+                        Formatting.RESET, Formatting.YELLOW, this.x, Formatting.WHITE,
+                        Formatting.YELLOW, this.y, Formatting.WHITE,
+                        Formatting.YELLOW, this.z, Formatting.WHITE,
+                        this.getDimensionColor(dimension), dimension))
+        );
+        tooltip.add(Text.literal(String.format("%sDistance: %s%s", Formatting.WHITE, Formatting.YELLOW, distance)));
+        tooltip.add(Text.literal(String.format("%sExp Cost: %s%s%s Levels", Formatting.WHITE, (canTravel ? Formatting.GREEN : Formatting.RED), cost, Formatting.WHITE)));
         return tooltip;
+    }
+
+    @NotNull
+    private Formatting getDimensionColor(String dimension) {
+        switch (dimension) {
+            case "OVERWORLD" -> {
+                return Formatting.DARK_GREEN;
+            }
+            case "NETHER" -> {
+                return Formatting.DARK_RED;
+            }
+            case "THE_END" -> {
+                return Formatting.DARK_PURPLE;
+            }
+            default -> {
+                return Formatting.WHITE;
+            }
+        }
     }
 
     @Override
