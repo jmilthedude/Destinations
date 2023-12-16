@@ -69,8 +69,9 @@ public class DestinationEventHandler {
         ServerWorld world = data.getWorld();
         BlockPos blockPos = hitResult.getBlockPos();
         if (!DestinationStructure.isValid(world, blockPos)) return;
-        BlockPos origin = DestinationStructure.findTop(world, blockPos);
-        if (origin == null) return;
+        Optional<BlockPos> originOptional = DestinationStructure.findOrigin(world, blockPos);
+        if (originOptional.isEmpty()) return;
+        BlockPos origin = originOptional.get();
         Optional<Destination> destination = DestinationsState.get().getDestination(data.getWorld(), origin);
         if (destination.isEmpty()) return;
         if (DestinationsState.get().addStored(data.getPlayer(), destination.get())) {

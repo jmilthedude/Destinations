@@ -15,27 +15,26 @@ import net.ninjadev.destinations.init.ModConfigs;
 import net.ninjadev.destinations.util.DestinationStructure;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class DestinationsState extends PersistentState {
 
     private static final String DATA_NAME = Destinations.MOD_ID + "_Data";
 
-    private final Map<UUID, HashMap<UUID, Destination>> created = new HashMap<>();
-    private final Map<UUID, HashMap<UUID, Destination>> stored = new HashMap<>();
+    private final DestinationMap destinations = new DestinationMap();
 
 
     public Set<Destination> getCreatedDestinations(PlayerEntity player) {
-        return ImmutableSet.copyOf(created.getOrDefault(player.getUuid(), new HashMap<>()).values());
+        return ImmutableSet.copyOf(destinations.getOrDefault(player.getUuid(), new HashMap<>()).values());
     }
 
     public Optional<Destination> getDestination(PlayerEntity player, World world, BlockPos pos) {
-        BlockPos top = DestinationStructure.findTop(world, pos);
-        if (top == null) return Optional.empty();
+        Optional<BlockPos> originOptional = DestinationStructure.findOrigin(world, pos);
+        if (originOptional.isEmpty()) return Optional.empty();
+        BlockPos origin = originOptional.get();
         Set<Destination> destinations = this.getCreatedDestinations(player);
         for (Destination destination : destinations) {
             if (!destination.getWorld().equals(world.getRegistryKey())) continue;
-            if (destination.getX() == top.getX() && destination.getY() == top.getY() && destination.getZ() == top.getZ()) {
+            if (destination.getX() == origin.getX() && destination.getY() == origin.getY() && destination.getZ() == origin.getZ()) {
                 return Optional.of(destination);
             }
         }
@@ -43,37 +42,39 @@ public class DestinationsState extends PersistentState {
     }
 
     public Optional<Destination> getDestinationById(UUID id) {
-        return this.created.values().stream().map(map -> map.get(id)).findFirst();
+        return this.destinations.values().stream().map(map -> map.get(id)).findFirst();
     }
 
     public Optional<Destination> getDestination(World world, BlockPos pos) {
-        BlockPos top = DestinationStructure.findTop(world, pos);
-        if (top == null) return Optional.empty();
-        return this.created.values()
+        Optional<BlockPos> originOptional = DestinationStructure.findOrigin(world, pos);
+        if (originOptional.isEmpty()) return Optional.empty();
+        BlockPos origin = originOptional.get();
+        return this.destinations.values()
                 .stream()
                 .map(HashMap::values)
                 .map(ArrayList::new)
                 .flatMap(List::stream)
-                .filter(destination -> destination.getWorld() == world.getRegistryKey() && destination.getY() == top.getY() && destination.getX() == top.getX() && destination.getZ() == top.getZ())
+                .filter(destination -> destination.getWorld() == world.getRegistryKey() && destination.getY() == origin.getY() && destination.getX() == origin.getX() && destination.getZ() == origin.getZ())
                 .findFirst();
     }
 
     public boolean exists(World world, BlockPos pos) {
-        BlockPos top = DestinationStructure.findTop(world, pos);
-        if (top == null) return false;
-        return this.created.values()
+        Optional<BlockPos> originOptional = DestinationStructure.findOrigin(world, pos);
+        if (originOptional.isEmpty()) return false;
+        BlockPos origin = originOptional.get();
+        return this.destinations.values()
                 .stream()
                 .map(HashMap::values)
                 .map(ArrayList::new)
                 .flatMap(List::stream)
-                .anyMatch(destination -> destination.getWorld() == world.getRegistryKey() && destination.getY() == top.getY() && destination.getX() == top.getX() && destination.getZ() == top.getZ());
+                .anyMatch(destination -> destination.getWorld() == world.getRegistryKey() && destination.getY() == origin.getY() && destination.getX() == origin.getX() && destination.getZ() == origin.getZ());
     }
 
     public boolean add(PlayerEntity player, Destination destination) {
         UUID uuid = player.getUuid();
-        if (created.containsKey(uuid)) {
+        if (destinations.containsKey(uuid)) {
             int max = ModConfigs.GENERAL.getMaxCreated();
-            HashMap<UUID, Destination> map = created.get(uuid);
+            HashMap<UUID, Destination> map = destinations.get(uuid);
             if (map.size() == max) {
                 player.sendMessage(Text.literal(String.format("You have reached your destination limit of %s destinations.", max)).formatted(Formatting.GOLD), true);
                 return false;
@@ -86,18 +87,18 @@ public class DestinationsState extends PersistentState {
         }
         HashMap<UUID, Destination> destinations = new HashMap<>();
         destinations.put(destination.getId(), destination);
-        created.put(uuid, destinations);
+        this.destinations.put(uuid, destinations);
         this.markDirty();
         return true;
     }
 
     public boolean remove(PlayerEntity player, Destination destination) {
         UUID uuid = player.getUuid();
-        if (!created.containsKey(uuid)) {
+        if (!destinations.containsKey(uuid)) {
             return false;
         }
 
-        HashMap<UUID, Destination> destinations = created.get(uuid);
+        HashMap<UUID, Destination> destinations = this.destinations.get(uuid);
         if (!destinations.containsKey(destination.getId())) {
             return false;
         }
@@ -158,20 +159,12 @@ public class DestinationsState extends PersistentState {
     public NbtCompound writeNbt(NbtCompound nbt) {
         NbtCompound createdTag = new NbtCompound();
         NbtList createdList = new NbtList();
-        for (Map.Entry<UUID, HashMap<UUID, Destination>> entry : this.created.entrySet()) {
+        for (Map.Entry<UUID, HashMap<UUID, Destination>> entry : this.destinations.entrySet()) {
             entry.getValue().forEach((id, destination) -> createdList.add(destination.serialize()));
             createdTag.put(entry.getKey().toString(), createdList);
         }
 
-        NbtCompound storedTag = new NbtCompound();
-        NbtList storedList = new NbtList();
-        for (Map.Entry<UUID, HashMap<UUID, Destination>> entry : stored.entrySet()) {
-            entry.getValue().forEach((id, destination) -> storedList.add(destination.serialize()));
-            storedTag.put(entry.getKey().toString(), storedList);
-        }
-
         nbt.put("created", createdTag);
-        nbt.put("stored", storedTag);
         return nbt;
     }
 
@@ -182,14 +175,7 @@ public class DestinationsState extends PersistentState {
             NbtList list = nbt.getList(key, NbtElement.COMPOUND_TYPE);
             HashMap<UUID, Destination> destinations = new HashMap<>();
             list.stream().map(tag -> (NbtCompound) tag).map(Destination::new).forEach(destination -> destinations.put(destination.getId(), destination));
-            state.created.put(UUID.fromString(key), destinations);
-        }
-        NbtCompound storedNbt = nbt.getCompound("stored");
-        for (String key : storedNbt.getKeys()) {
-            NbtList list = nbt.getList(key, NbtElement.COMPOUND_TYPE);
-            HashMap<UUID, Destination> destinations = new HashMap<>();
-            list.stream().map(tag -> (NbtCompound) tag).map(Destination::new).forEach(destination -> destinations.put(destination.getId(), destination));
-            state.stored.put(UUID.fromString(key), destinations);
+            state.destinations.put(UUID.fromString(key), destinations);
         }
         return state;
     }
